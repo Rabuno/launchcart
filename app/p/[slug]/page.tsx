@@ -1,11 +1,14 @@
-import { generateSalesKit } from '@/lib/generator';
+import ProductLanding from '@/components/ProductLanding';
+import { decodeProduct, demoProduct } from '@/lib/product';
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
-  // Demo fetch product based on slug
-  const product = { name: "LaunchCart MVP", description: "Công cụ bán hàng", price: "99000", id: "1" };
-  const html = generateSalesKit(product);
+type ProductPageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ data?: string }>;
+};
 
-  return (
-    <div className="p-8" dangerouslySetInnerHTML={{ __html: html }} />
-  );
+export default async function ProductPage({ params, searchParams }: ProductPageProps) {
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const product = query?.data ? decodeProduct(query.data) : { ...demoProduct, slug };
+
+  return <ProductLanding product={product} />;
 }
