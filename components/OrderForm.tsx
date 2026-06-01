@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { apiUrl } from '@/lib/api';
 
 export default function OrderForm({ productId }: { productId: string }) {
   const [formData, setFormData] = useState({ name: '', phone: '', quantity: 1 });
@@ -12,16 +12,19 @@ export default function OrderForm({ productId }: { productId: string }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('orders')
-        .insert([{ 
-            product_id: productId, 
-            customer_name: formData.name, 
-            phone: formData.phone, 
-            quantity: formData.quantity 
-        }]);
-      
-      if (error) throw error;
+      const response = await fetch(apiUrl('/api/orders'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: productId,
+          customer_name: formData.name,
+          phone: formData.phone,
+          quantity: formData.quantity,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Create order failed');
       setSuccess(true);
     } catch (err) {
       console.error(err);

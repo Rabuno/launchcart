@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { apiUrl } from '@/lib/api';
 
 export default function ProductForm() {
   const [loading, setLoading] = useState(false);
@@ -12,16 +14,22 @@ export default function ProductForm() {
     const price = formData.get('price') as string;
     const description = formData.get('description') as string;
 
-    // Supabase logic here
-    const { data, error } = await supabase
-      .from('products')
-      .insert([{ name, price, description, slug: name.toLowerCase().replace(/ /g, '-') }])
-      .select();
+    try {
+      const response = await fetch(apiUrl('/api/products'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price, description }),
+      });
 
-    if (error) console.error(error);
-    else console.log('Product created:', data);
-    
-    setLoading(false);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Create product failed');
+      console.log('Product created:', result.data);
+    } catch (error) {
+      console.error(error);
+      alert('Có lỗi xảy ra khi tạo sản phẩm!');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
