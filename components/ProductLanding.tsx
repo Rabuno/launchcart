@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { formatPrice, LaunchCartProduct } from '@/lib/product';
+import { createOrder } from '@/lib/orders';
 
 type Order = {
   name: string;
@@ -13,22 +14,39 @@ type Order = {
 export default function ProductLanding({ product }: { product: LaunchCartProduct }) {
   const [order, setOrder] = useState<Order>({ name: '', phone: '', quantity: 1, note: '' });
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const total = product.price * order.quantity;
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const savedOrder = {
-      ...order,
-      productId: product.id,
-      productName: product.name,
-      total,
-      createdAt: new Date().toISOString(),
-    };
+    setLoading(true);
+    setError('');
 
-    const previous = JSON.parse(window.localStorage.getItem('launchcart_orders') || '[]');
-    window.localStorage.setItem('launchcart_orders', JSON.stringify([savedOrder, ...previous].slice(0, 20)));
-    setSuccess(true);
+    try {
+      const result = await createOrder({
+        productId: product.id,
+        productName: product.name,
+        customerName: order.name,
+        customerPhone: order.phone,
+        quantity: order.quantity,
+        price: product.price,
+        currency: product.currency,
+        total,
+        note: order.note,
+      });
+
+      if (result.success) {
+        setSuccess(true);
+      } else {
+        setError(result.error || 'Đặt hàng thất bại, vui lòng thử lại.');
+      }
+    } catch {
+      setError('Có lỗi xảy ra, vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,7 +85,7 @@ export default function ProductLanding({ product }: { product: LaunchCartProduct
           {success ? (
             <div className="success-box">
               <h3>Đặt hàng thành công</h3>
-              <p>Đơn demo đã được lưu trên trình duyệt. Người bán có thể nối Supabase/CRM ở bước production.</p>
+              <p>Đơn hàng đã được ghi nhận. Người bán sẽ liên hệ xác nhận.</p>
               <a className="button secondary" href="/">Tạo sản phẩm khác</a>
             </div>
           ) : (
@@ -97,7 +115,10 @@ export default function ProductLanding({ product }: { product: LaunchCartProduct
                 <span>Tạm tính</span>
                 <strong>{formatPrice(total, product.currency)}</strong>
               </div>
-              <button className="button primary full" type="submit">Gửi đơn</button>
+              {error && <p className="error-text">{error}</p>}
+              <button className="button primary full" type="submit" disabled={loading}>
+                {loading ? 'Đang gửi...' : 'Gửi đơn'}
+              </button>
             </form>
           )}
         </div>
