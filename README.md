@@ -42,3 +42,4 @@ Set Vercel environment variable:
 - `NEXT_PUBLIC_API_BASE_URL` = your Render backend URL, e.g. `https://launchcart-backend.onrender.com`
 
 Vercel config is in `vercel.json`.
+# Trigger CI
