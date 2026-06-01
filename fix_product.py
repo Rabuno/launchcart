@@ -1,3 +1,12 @@
+import re
+import os
+
+file_path = '/opt/data/workspace/launchcart/lib/product.ts'
+with open(file_path, 'r') as f:
+    content = f.read()
+
+# Define robust browser-compatible helpers
+new_code = """
 export type LaunchCartProduct = {
   id: string;
   slug: string;
@@ -32,41 +41,23 @@ export const demoProduct: LaunchCartProduct = {
   sellerName: 'LaunchCart',
 };
 
-/**
- * Encode a string to base64url using only Web APIs (btoa).
- * Works in all browsers including Safari — no Buffer.from('base64url').
- */
-function toBase64Url(value: string): string {
-  // Convert string to UTF-8 binary string for btoa
-  const utf8 = encodeURIComponent(value).replace(/%([0-9A-F]{2})/g, (_, p1) =>
-    String.fromCharCode(parseInt(p1, 16))
-  );
-  const base64 = btoa(utf8);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-/**
- * Decode a base64url string using only Web APIs (atob).
- * Works in all browsers including Safari — no Buffer.from('base64url').
- */
-function fromBase64Url(value: string): string {
-  // Restore standard base64 and add padding
-  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-  const binary = atob(padded);
-  // Decode UTF-8 bytes back to string
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+function toBase64Url(value: string) {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'utf8').toString('base64url');
   }
-  return decodeURIComponent(
-    Array.from(bytes)
-      .map((b) => '%' + b.toString(16).padStart(2, '0'))
-      .join('')
-  );
+  const str = btoa(unescape(encodeURIComponent(value)));
+  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function slugify(value: string): string {
+function fromBase64Url(value: string) {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'base64url').toString('utf8');
+  }
+  const str = value.replace(/-/g, '+').replace(/_/g, '/');
+  return decodeURIComponent(escape(atob(str)));
+}
+
+export function slugify(value: string) {
   const slug = value
     .toLowerCase()
     .normalize('NFD')
@@ -77,7 +68,7 @@ export function slugify(value: string): string {
   return slug || 'product';
 }
 
-export function formatPrice(value: number, currency = 'VND'): string {
+export function formatPrice(value: number, currency = 'VND') {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency,
@@ -89,7 +80,7 @@ export function normalizeProduct(input: Partial<LaunchCartProduct>): LaunchCartP
   const name = String(input.name || demoProduct.name).trim();
   const slug = String(input.slug || slugify(name)).trim();
   const highlights = Array.isArray(input.highlights)
-    ? input.highlights.map((item: string) => String(item).trim()).filter(Boolean).slice(0, 6)
+    ? input.highlights.map((item) => String(item).trim()).filter(Boolean).slice(0, 6)
     : demoProduct.highlights;
 
   return {
@@ -109,12 +100,12 @@ export function normalizeProduct(input: Partial<LaunchCartProduct>): LaunchCartP
   };
 }
 
-export function encodeProduct(product: Partial<LaunchCartProduct>): string {
+export function encodeProduct(product: Partial<LaunchCartProduct>) {
   const json = JSON.stringify(normalizeProduct(product));
   return toBase64Url(json);
 }
 
-export function decodeProduct(encoded?: string | string[]): LaunchCartProduct {
+export function decodeProduct(encoded?: string | string[]) {
   if (!encoded || Array.isArray(encoded)) return demoProduct;
   try {
     const json = fromBase64Url(encoded);
@@ -124,3 +115,7 @@ export function decodeProduct(encoded?: string | string[]): LaunchCartProduct {
     return demoProduct;
   }
 }
+"""
+
+with open(file_path, 'w') as f:
+    f.write(new_code.strip())

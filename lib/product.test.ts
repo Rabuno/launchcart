@@ -16,13 +16,26 @@ describe('product helpers', () => {
     expect(product.sellerName).toBe(demoProduct.sellerName);
   });
 
-  it('encodes and decodes product payloads for shareable sales URLs', () => {
-    const encoded = encodeProduct({ name: 'Template Pack', price: 99000, highlights: ['One', 'Two'] });
+  it('encodes and decodes Vietnamese text (Safari-safe, no Buffer.from base64url)', () => {
+    const encoded = encodeProduct({
+      name: 'Khóa học AI Đỉnh Cao',
+      tagline: 'Tạo trang bán hàng gọn',
+      description: 'Hoàn tiền trong 7 ngày',
+      highlights: ['Form đặt hàng không cần tài khoản', 'Phù hợp MVP, pre-order'],
+    });
     const decoded = decodeProduct(encoded);
 
-    expect(decoded.name).toBe('Template Pack');
-    expect(decoded.slug).toBe('template-pack');
-    expect(decoded.highlights).toEqual(['One', 'Two']);
+    expect(decoded.name).toBe('Khóa học AI Đỉnh Cao');
+    expect(decoded.tagline).toBe('Tạo trang bán hàng gọn');
+    expect(decoded.description).toBe('Hoàn tiền trong 7 ngày');
+    expect(decoded.highlights).toEqual(['Form đặt hàng không cần tài khoản', 'Phù hợp MVP, pre-order']);
+  });
+
+  it('produces URL-safe output (no + / = characters)', () => {
+    const encoded = encodeProduct({ name: 'Test Product With Special Chars: @#$%' });
+    expect(encoded).not.toContain('+');
+    expect(encoded).not.toContain('/');
+    expect(encoded).not.toContain('=');
   });
 
   it('falls back to the demo product for invalid encoded payloads', () => {
