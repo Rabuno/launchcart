@@ -35,13 +35,3 @@ jobs:
           done
           echo "❌ Health check failed"
           exit 1
-      - name: Notify Telegram
-        if: always()
-        run: |
-          STATUS="${{ job.status }}"
-          VERSION="${{ github.ref_name }}"
-          MSG="🚀 Production deploy $VERSION: $STATUS%0ARepo: ${{ github.repository }}"
-          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d "text=$MSG" \
-            -d "parse_mode=HTML" || true
