@@ -32,7 +32,58 @@ export const demoProduct: LaunchCartProduct = {
   sellerName: 'LaunchCart',
 };
 
-export function slugify(value: string) {
+/**
+ * Encode a string to base64url.
+ * Uses Node.js Buffer when available (server-side / build),
+ * falls back to btoa + manual replacement in the browser.
+ */
+function toBase64Url(value: string): string {
+  if (typeof globalThis !== 'undefined' && typeof (globalThis as any).Buffer !== 'undefined') {
+    return (globalThis as any).Buffer.from(value, 'utf8').toString('base64url');
+  }
+
+  let binary: string;
+  try {
+    // Encodeutf-8
+    binary = encodeURIComponent(value).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+      String.fromCharCode(parseInt(p1, 16))
+    );
+  } catch {
+    binary = value;
+  }
+  const base64 = btoa(binary);
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Decode a base64url string.
+ * Uses Node.js Buffer when available (server-side / build),
+ * falls back to atob + manual replacement in the browser.
+ */
+function fromBase64Url(value: string): string {
+  if (typeof globalThis !== 'undefined' && typeof (globalThis as any).Buffer !== 'undefined') {
+    return (globalThis as any).Buffer.from(value, 'base64url').toString('utf8');
+  }
+
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  try {
+    return decodeURIComponent(
+      Array.from(bytes)
+        .map((b) => '%' + b.toString(16).padStart(2, '0'))
+        .join('')
+    );
+  } catch {
+    return binary;
+  }
+}
+
+export function slugify(value: string): string {
   const slug = value
     .toLowerCase()
     .normalize('NFD')
@@ -40,11 +91,10 @@ export function slugify(value: string) {
     .replace(/đ/g, 'd')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
-
   return slug || 'product';
 }
 
-export function formatPrice(value: number, currency = 'VND') {
+export function formatPrice(value: number, currency = 'VND'): string {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency,
@@ -56,7 +106,7 @@ export function normalizeProduct(input: Partial<LaunchCartProduct>): LaunchCartP
   const name = String(input.name || demoProduct.name).trim();
   const slug = String(input.slug || slugify(name)).trim();
   const highlights = Array.isArray(input.highlights)
-    ? input.highlights.map((item) => String(item).trim()).filter(Boolean).slice(0, 6)
+    ? input.highlights.map((item: string) => String(item).trim()).filter(Boolean).slice(0, 6)
     : demoProduct.highlights;
 
   return {
@@ -76,36 +126,13 @@ export function normalizeProduct(input: Partial<LaunchCartProduct>): LaunchCartP
   };
 }
 
-function toBase64Url(value: string) {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(value, 'utf8').toString('base64url');
-  }
-
-  const bytes = new TextEncoder().encode(value);
-  let binary = '';
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function fromBase64Url(value: string) {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(value, 'base64url').toString('utf8');
-  }
-
-  const base64 = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
-  const binary = atob(base64);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-export function encodeProduct(product: Partial<LaunchCartProduct>) {
+export function encodeProduct(product: Partial<LaunchCartProduct>): string {
   const json = JSON.stringify(normalizeProduct(product));
   return toBase64Url(json);
 }
 
-export function decodeProduct(encoded?: string | string[]) {
+export function decodeProduct(encoded?: string | string[]): LaunchCartProduct {
   if (!encoded || Array.isArray(encoded)) return demoProduct;
-
   try {
     const json = fromBase64Url(encoded);
     const parsed = JSON.parse(json) as Partial<LaunchCartProduct>;
