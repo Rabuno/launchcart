@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { formatPrice, LaunchCartProduct } from '@/lib/product';
 import { createOrder } from '@/lib/orders';
@@ -86,7 +87,7 @@ export default function ProductLanding({ product }: { product: LaunchCartProduct
             <div className="success-box">
               <h3>Đặt hàng thành công</h3>
               <p>Đơn hàng đã được ghi nhận. Người bán sẽ liên hệ xác nhận.</p>
-              <a className="button secondary" href="/">Tạo sản phẩm khác</a>
+              <Link className="button secondary" href="/">Tạo sản phẩm khác</Link>
             </div>
           ) : (
             <form onSubmit={submit} className="order-form">

@@ -4,7 +4,13 @@ on:
   schedule:
     - cron: '0 6 * * *'
   pull_request:
-    branches: [main]
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
 
 jobs:
   security:
